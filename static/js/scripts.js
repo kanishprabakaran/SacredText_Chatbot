@@ -53,7 +53,7 @@ async function sendMessage() {
 
         // Show language options if ready for translation
         if (data.ready_for_translation) {
-            showLanguageOptions(data.languages, data.translation);
+            showLanguageOptions(data.languages, data.translation, data.explanation, data.story);
         }
     } catch (error) {
         hideTypingIndicator();
@@ -108,7 +108,7 @@ function hideTypingIndicator() {
 }
 
 // Function to show language options
-function showLanguageOptions(languages, text) {
+function showLanguageOptions(languages, text, explanation, story) {
     const optionsContainer = document.createElement('div');
     optionsContainer.classList.add('translation-options');
     optionsContainer.innerHTML = '<strong>Select a language for translation:</strong>';
@@ -119,19 +119,34 @@ function showLanguageOptions(languages, text) {
         button.textContent = `Translate to ${getLanguageName(lang)}`;
         button.dataset.language = lang;
         button.dataset.text = text;
+        button.dataset.explanation = explanation;
+        button.dataset.story = story;
 
         button.addEventListener('click', async (event) => {
             const language = event.target.dataset.language;
             const originalText = event.target.dataset.text;
+            const originalExplanation = event.target.dataset.explanation;
+            const originalStory = event.target.dataset.story;
 
-            // Translate the text
-            const translatedText = await translateMessage(originalText, language);
+            // Translate the text, explanation, and story
+            const { translatedText, translatedExplanation, translatedStory } = await translateMessage(
+                originalText,
+                originalExplanation,
+                originalStory,
+                language
+            );
 
             // Add the translated message to the chat
-            addMessageToChat('bot', `<strong>Translated (${getLanguageName(language)}):</strong> ${translatedText}`);
+            addMessageToChat(
+                'bot',
+                `<strong>Translated (${getLanguageName(language)}):</strong>
+                <div><strong>Translation:</strong> ${translatedText}</div>
+                <div><strong>Explanation:</strong> ${translatedExplanation}</div>
+                <div><strong>Story:</strong> ${translatedStory}</div>`
+            );
 
             // Show language options again
-            showLanguageOptions(languages, originalText);
+            showLanguageOptions(languages, originalText, originalExplanation, originalStory);
         });
 
         optionsContainer.appendChild(button);
@@ -142,14 +157,14 @@ function showLanguageOptions(languages, text) {
 }
 
 // Function to translate a message
-async function translateMessage(text, language) {
+async function translateMessage(text, explanation, story, language) {
     try {
         const response = await fetch('/translate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ text, language }),
+            body: JSON.stringify({ text, explanation, story, language }),
         });
 
         if (!response.ok) {
@@ -157,10 +172,18 @@ async function translateMessage(text, language) {
         }
 
         const data = await response.json();
-        return data.translated_text;
+        return {
+            translatedText: data.translated_text,
+            translatedExplanation: data.translated_explanation,
+            translatedStory: data.translated_story,
+        };
     } catch (error) {
         console.error("Error during translation:", error);
-        return "Translation failed.";
+        return {
+            translatedText: "Translation failed.",
+            translatedExplanation: "Translation failed.",
+            translatedStory: "Translation failed.",
+        };
     }
 }
 

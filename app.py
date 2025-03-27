@@ -154,10 +154,18 @@ def generate_response(query: str, text_type: str) -> Dict[str, Any]:
         translations = {}
         for lang in ["ta", "hi", "ml", "te", "bn", "gu", "kn", "mr", "pa", "ur"]:  # Add new languages here
             try:
-                translations[lang] = translate_text(generated_response["translation"], lang)
+                translations[lang] = {
+                    "translation": translate_text(generated_response["translation"], lang),
+                    "explanation": translate_text(generated_response["explanation"], lang),
+                    "story": translate_text(generated_response["story"], lang),
+                }
             except Exception as e:
                 logging.error(f"Error translating to {lang}: {e}")
-                translations[lang] = "Translation failed."
+                translations[lang] = {
+                    "translation": "Translation failed.",
+                    "explanation": "Translation failed.",
+                    "story": "Translation failed.",
+                }
 
         # Add translations to the response
         generated_response["translations"] = translations
@@ -268,15 +276,22 @@ def handle_query():
 def handle_translation():
     data = request.json
     text = data.get("text")
+    explanation = data.get("explanation")
+    story = data.get("story")
     target_language = data.get("language")
 
-    if not text or not target_language:
-        return jsonify({"error": "Text and target language are required"}), 400
+    if not text or not explanation or not story or not target_language:
+        return jsonify({"error": "Text, explanation, story, and target language are required"}), 400
 
     try:
         translated_text = translate_text(text, target_language)
+        translated_explanation = translate_text(explanation, target_language)
+        translated_story = translate_text(story, target_language)
+
         return jsonify({
             "translated_text": translated_text,
+            "translated_explanation": translated_explanation,
+            "translated_story": translated_story,
             "languages": ["ta", "hi", "ml", "te", "bn", "gu", "kn", "mr", "pa", "ur"],  # Add new languages here
             "ready_for_translation": True  # Indicate that translation options should be shown again
         })
