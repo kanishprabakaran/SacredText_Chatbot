@@ -9,6 +9,7 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_google_genai import ChatGoogleGenerativeAI
 from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
+import requests  # Add this import
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,7 +18,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 # Get API key from environment variable
-api_key = "AIzaSyCveAI97HwarrgLwGuGw6Eao1d7qDHOIEE"
+api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
     raise ValueError("No Google API Key found. Please set the GOOGLE_API_KEY environment variable.")
 
@@ -138,7 +139,7 @@ def generate_response(query: str, text_type: str) -> Dict[str, Any]:
             result_summary = f"Thirukkural about {parsed_response.section.lower()} - Translation: {parsed_response.translation}"
             thirukkural_history.add_user_message(query)
             thirukkural_history.add_ai_message(result_summary)
-            return parsed_response.dict()
+            generated_response = parsed_response.dict()
         else:
             chat_history = format_chat_history(bhagavad_gita_history)
             formatted_prompt = bhagavad_gita_prompt.format(query=query, chat_history=chat_history)
@@ -147,7 +148,21 @@ def generate_response(query: str, text_type: str) -> Dict[str, Any]:
             result_summary = f"Bhagavad Gita {parsed_response.chapter} - Translation: {parsed_response.translation}"
             bhagavad_gita_history.add_user_message(query)
             bhagavad_gita_history.add_ai_message(result_summary)
-            return parsed_response.dict()
+            generated_response = parsed_response.dict()
+
+        # Translate the generated response into supported languages
+        translations = {}
+        for lang in ["ta", "hi", "ml", "te", "bn", "gu", "kn", "mr", "pa", "ur"]:  # Add new languages here
+            try:
+                translations[lang] = translate_text(generated_response["translation"], lang)
+            except Exception as e:
+                logging.error(f"Error translating to {lang}: {e}")
+                translations[lang] = "Translation failed."
+
+        # Add translations to the response
+        generated_response["translations"] = translations
+        return generated_response
+
     except Exception as e:
         logging.error(f"Error generating response: {e}")
         return {
@@ -155,7 +170,8 @@ def generate_response(query: str, text_type: str) -> Dict[str, Any]:
             "translation": "Error",
             "section": "Error",
             "explanation": f"An error occurred: {str(e)}",
-            "story": "Unable to generate a story at this time."
+            "story": "Unable to generate a story at this time.",
+            "translations": {}
         }
 
 # Handle follow-up query dynamically for both Thirukkural and Bhagavad Gita
@@ -170,6 +186,39 @@ def is_follow_up_query(query: str) -> bool:
         any(keyword in query_lower for keyword in ["thirukkural", "kural", "bhagavad gita", "gita", "similar", "same"])
     )
 
+# Function to translate text using Azure Translator API
+def translate_text(text: str, target_language: str) -> str:
+    """
+    Translates the given text into the target language using Azure Translator API.
+    """
+    translator_key = os.getenv("AZURE_TRANSLATOR_KEY")
+    translator_endpoint = os.getenv("AZURE_TRANSLATOR_ENDPOINT")
+
+    if not translator_key or not translator_endpoint:
+        raise ValueError("Azure Translator API key or endpoint is not set in the environment variables.")
+
+    # Azure Translator API URL
+    url = f"{translator_endpoint}/translate?api-version=3.0&to={target_language}"
+
+    # Headers for the API request
+    headers = {
+        "Ocp-Apim-Subscription-Key": translator_key,
+        "Ocp-Apim-Subscription-Region": "centralindia",  # Replace with your Azure region if needed
+        "Content-Type": "application/json"
+    }
+
+    # Request body
+    body = [{"text": text}]
+
+    # Make the API request
+    response = requests.post(url, headers=headers, json=body)
+    if response.status_code != 200:
+        raise Exception(f"Azure Translator API error: {response.status_code} - {response.text}")
+
+    # Parse the response
+    translated_text = response.json()[0]["translations"][0]["text"]
+    return translated_text
+
 # Initialize Flask app
 app = Flask(__name__)
 
@@ -180,7 +229,7 @@ def handle_query():
     query = data.get("query")
     if not query:
         return jsonify({"error": "Query is required"}), 400
-    
+
     # Handle introductory chat inputs
     if query.lower() in ["hi", "hello", "hey", "hi there", "hello there"]:
         return jsonify({
@@ -188,30 +237,52 @@ def handle_query():
             "translation": "Hello! I'm a sacred text chatbot. How can I assist you today?",
             "section": "Greeting",
             "explanation": "This is a friendly greeting to start the conversation.",
-            "story": "No story here, just a warm welcome!"
+            "story": "No story here, just a warm welcome!",
+            "languages": ["ta", "hi", "ml", "te", "bn", "gu", "kn", "mr", "pa", "ur"],  # Add new languages here
+            "ready_for_translation": True  # Indicate that translation options should be shown
         })
-    
+
     text_type = determine_text_type(query)
-    
+
     # Handle follow-up query dynamically
     if is_follow_up_query(query):
-        # Determine the target text type based on the query
         if "thirukkural" in query.lower() or "kural" in query.lower():
             text_type = "thirukkural"
-            # Use the last Bhagavad Gita query as context
             last_query = bhagavad_gita_history.messages[-2].content if len(bhagavad_gita_history.messages) >= 2 else ""
         else:
             text_type = "bhagavad_gita"
-            # Use the last Thirukkural query as context
             last_query = thirukkural_history.messages[-2].content if len(thirukkural_history.messages) >= 2 else ""
-        
-        # Modify the query to include the context of the previous query
+
         query = f"{last_query} (in {text_type.replace('_', ' ').title()})"
-    
+
     response = generate_response(query, text_type)
-    
+
+    # Add translation options to the response
+    response["languages"] = ["ta", "hi", "ml", "te", "bn", "gu", "kn", "mr", "pa", "ur"]  # Add new languages here
+    response["ready_for_translation"] = True  # Indicate that translation options should be shown
+
     return jsonify(response)
 
+# Route to handle translation requests
+@app.route("/translate", methods=["POST"])
+def handle_translation():
+    data = request.json
+    text = data.get("text")
+    target_language = data.get("language")
+
+    if not text or not target_language:
+        return jsonify({"error": "Text and target language are required"}), 400
+
+    try:
+        translated_text = translate_text(text, target_language)
+        return jsonify({
+            "translated_text": translated_text,
+            "languages": ["ta", "hi", "ml", "te", "bn", "gu", "kn", "mr", "pa", "ur"],  # Add new languages here
+            "ready_for_translation": True  # Indicate that translation options should be shown again
+        })
+    except Exception as e:
+        logging.error(f"Error during translation: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # Route for clearing conversation history
 @app.route("/clear_history", methods=["POST"])
