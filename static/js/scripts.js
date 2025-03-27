@@ -53,7 +53,7 @@ async function sendMessage() {
 
         // Show language options if ready for translation
         if (data.ready_for_translation) {
-            showLanguageOptions(data.languages, data.translation, data.explanation, data.story);
+            showTranslationOptions(data.languages, data.translation, data.explanation, data.story);
         }
     } catch (error) {
         hideTypingIndicator();
@@ -107,53 +107,110 @@ function hideTypingIndicator() {
     }
 }
 
-// Function to show language options
-function showLanguageOptions(languages, text, explanation, story) {
+// Show translation options with animation
+function showTranslationOptions(languages, text, explanation, story) {
+    const existingOptions = document.querySelector('.translation-options');
+    if (existingOptions) {
+        existingOptions.remove();
+    }
+
     const optionsContainer = document.createElement('div');
     optionsContainer.classList.add('translation-options');
-    optionsContainer.innerHTML = '<strong>Select a language for translation:</strong>';
+    optionsContainer.style.opacity = '0';
+    optionsContainer.innerHTML = '<strong>Select a Language for Translation</strong>';
+
+    const buttonsGrid = document.createElement('div');
+    buttonsGrid.classList.add('translation-buttons-grid');
 
     languages.forEach((lang) => {
-        const button = document.createElement('button');
-        button.classList.add('translate-button');
-        button.textContent = `Translate to ${getLanguageName(lang)}`;
-        button.dataset.language = lang;
-        button.dataset.text = text;
-        button.dataset.explanation = explanation;
-        button.dataset.story = story;
-
-        button.addEventListener('click', async (event) => {
-            const language = event.target.dataset.language;
-            const originalText = event.target.dataset.text;
-            const originalExplanation = event.target.dataset.explanation;
-            const originalStory = event.target.dataset.story;
-
-            // Translate the text, explanation, and story
-            const { translatedText, translatedExplanation, translatedStory } = await translateMessage(
-                originalText,
-                originalExplanation,
-                originalStory,
-                language
-            );
-
-            // Add the translated message to the chat
-            addMessageToChat(
-                'bot',
-                `<strong>Translated (${getLanguageName(language)}):</strong>
-                <div><strong>Translation:</strong> ${translatedText}</div>
-                <div><strong>Explanation:</strong> ${translatedExplanation}</div>
-                <div><strong>Story:</strong> ${translatedStory}</div>`
-            );
-
-            // Show language options again
-            showLanguageOptions(languages, originalText, originalExplanation, originalStory);
-        });
-
-        optionsContainer.appendChild(button);
+        const button = createTranslateButton(lang, text, explanation, story);
+        buttonsGrid.appendChild(button);
     });
 
+    optionsContainer.appendChild(buttonsGrid);
     chatMessages.appendChild(optionsContainer);
-    chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+
+    // Trigger animation
+    setTimeout(() => {
+        optionsContainer.style.opacity = '1';
+        optionsContainer.style.transform = 'translateY(0)';
+    }, 50);
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Create individual translation button with hover effects
+function createTranslateButton(lang, text, explanation, story) {
+    const button = document.createElement('button');
+    button.classList.add('translate-button');
+    button.dataset.language = lang;
+    button.dataset.text = text;
+    button.dataset.explanation = explanation;
+    button.dataset.story = story;
+    
+    const languageName = getLanguageName(lang);
+    button.innerHTML = `
+        ${languageName}
+        <span class="language-indicator">${getNativeText(lang)}</span>
+    `;
+
+    button.addEventListener('click', handleTranslationClick);
+    return button;
+}
+
+// Handle translation button click
+async function handleTranslationClick(event) {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.style.opacity = '0.7';
+
+    try {
+        const result = await translateMessage(
+            button.dataset.text,
+            button.dataset.explanation,
+            button.dataset.story,
+            button.dataset.language
+        );
+
+        // Add translated content with animation
+        addTranslatedContent(result, button.dataset.language);
+    } catch (error) {
+        console.error('Translation failed:', error);
+    } finally {
+        button.disabled = false;
+        button.style.opacity = '1';
+    }
+}
+
+// Add translated content with animation
+function addTranslatedContent(result, language) {
+    const translatedDiv = document.createElement('div');
+    translatedDiv.classList.add('translated-content');
+    translatedDiv.innerHTML = `
+        <div><strong>Translation:</strong> ${result.translatedText}</div>
+        <div><strong>Explanation:</strong> ${result.translatedExplanation}</div>
+        <div><strong>Story:</strong> ${result.translatedStory}</div>
+    `;
+
+    chatMessages.appendChild(translatedDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Get native text for language indicator
+function getNativeText(code) {
+    const nativeText = {
+        ta: 'தமிழ்',
+        hi: 'हिंदी',
+        ml: 'മലയാളം',
+        te: 'తెలుగు',
+        bn: 'বাংলা',
+        gu: 'ગુજરાતી',
+        kn: 'ಕನ್ನಡ',
+        mr: 'मराठी',
+        pa: 'ਪੰਜਾਬੀ',
+        ur: 'اردو'
+    };
+    return nativeText[code] || code;
 }
 
 // Function to translate a message

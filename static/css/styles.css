@@ -446,6 +446,134 @@ body::after {
     background: linear-gradient(to bottom, #ffae5f, #9a88eb);
 }
 
+/* Add these new styles for translation options */
+.translation-options {
+    margin: 15px 0;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(37, 40, 80, 0.9) 0%, rgba(42, 45, 92, 0.9) 100%);
+    border-radius: var(--border-radius);
+    border: 2px solid rgba(255, 158, 68, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.5s ease-out;
+}
+
+.translation-options strong {
+    display: block;
+    color: var(--accent-color);
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+.translation-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    justify-content: center;
+}
+
+.translate-button {
+    padding: 12px 15px;
+    border: none;
+    border-radius: 15px;
+    background: linear-gradient(135deg, var(--message-bot) 0%, var(--surface-color) 100%);
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 158, 68, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.translate-button:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    box-shadow: 0 5px 15px rgba(255, 158, 68, 0.3);
+}
+
+.translate-button::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 15px;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.translate-button:hover::before {
+    opacity: 1;
+}
+
+.translated-content {
+    margin-top: 15px;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(42, 45, 92, 0.8) 0%, rgba(37, 40, 80, 0.8) 100%);
+    border-radius: var(--border-radius);
+    border: 2px solid rgba(255, 158, 68, 0.2);
+    animation: slideIn 0.5s ease-out;
+}
+
+.translated-content div {
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.translated-content strong {
+    color: var(--accent-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Language Selection Indicator */
+.language-indicator {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--accent-color);
+    color: var(--text-light);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    transform: scale(0);
+    transition: transform 0.3s ease;
+}
+
+.translate-button:hover .language-indicator {
+    transform: scale(1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .translation-buttons-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+
+    .translate-button {
+        padding: 10px;
+        font-size: 13px;
+    }
+
+    .translated-content {
+        font-size: 14px;
+    }
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .chat-container {
