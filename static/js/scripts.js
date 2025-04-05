@@ -298,3 +298,37 @@ chatInput.addEventListener('keypress', function (e) {
         sendMessage();
     }
 });
+
+// Add touch event handling
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevent double-tap zoom on buttons
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(button => {
+        button.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            // Trigger click after a short delay to prevent double actions
+            setTimeout(() => this.click(), 100);
+        });
+    });
+
+    // Handle scroll position when keyboard appears
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+
+    chatInput.addEventListener('focus', () => {
+        // Scroll to bottom after a short delay to ensure keyboard is visible
+        setTimeout(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // Scroll the window to the input
+            chatInput.scrollIntoView(false);
+        }, 300);
+    });
+
+    // Fix for iOS bounce scroll
+    document.body.addEventListener('touchmove', function(e) {
+        if (e.target.closest('.chat-messages')) {
+            return;
+        }
+        e.preventDefault();
+    }, { passive: false });
+});

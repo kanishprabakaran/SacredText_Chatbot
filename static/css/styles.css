@@ -594,3 +594,126 @@ body::after {
         display: none;
     }
 }
+
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+    .chat-container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        margin: 0;
+        border: none;
+    }
+
+    .chat-header {
+        padding: 12px;
+        font-size: 20px;
+    }
+
+    .chat-messages {
+        padding: 10px;
+    }
+
+    .message-bubble {
+        max-width: 85%;
+        padding: 12px 15px;
+        font-size: 15px;
+    }
+
+    .avatar {
+        width: 35px;
+        height: 35px;
+        font-size: 16px;
+    }
+
+    .translation-buttons-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .translate-button {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    .chat-input-container {
+        padding: 10px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--surface-color);
+    }
+
+    .chat-input {
+        height: 45px;
+        font-size: 15px;
+        padding: 10px 15px;
+    }
+
+    .send-button {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+    }
+
+    .clear-button {
+        bottom: 80px;
+        right: 10px;
+        width: 45px;
+        height: 45px;
+    }
+
+    body {
+        padding: 0;
+        background-size: 
+            400px 450px,
+            400px 450px,
+            cover;
+    }
+
+    /* Fix for iOS devices */
+    .chat-input,
+    .translate-button {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+
+    /* Improve touch targets */
+    .translate-button,
+    .send-button,
+    .clear-button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Prevent rubber-banding on iOS */
+    .chat-messages {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+}
+
+/* Landscape mode adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+    .chat-container {
+        height: 100%;
+    }
+
+    .chat-messages {
+        max-height: calc(100vh - 120px);
+    }
+
+    .translation-buttons-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Prevent zoom on input focus for iOS */
+@supports (-webkit-touch-callout: none) {
+    input[type="text"],
+    textarea {
+        font-size: 16px;
+    }
+}
